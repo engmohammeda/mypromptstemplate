@@ -1,0 +1,69 @@
+name: Validate Skills
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Frontmatter & structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate every SKILL.md
+        run: python3 tools/validate_skills.py
+
+      - name: Skill inventory
+        if: always()
+        run: |
+          {
+            echo "## Skill inventory"
+            echo ""
+            echo "| Skill | Category | Lines | References |"
+            echo "|---|---|---|---|"
+            for f in $(find skills -name SKILL.md | sort); do
+              d=$(dirname "$f")
+              name=$(basename "$d")
+              cat=$(basename "$(dirname "$d")")
+              lines=$(wc -l < "$f")
+              refs=$(ls "$d/references" 2>/dev/null | wc -l)
+              echo "| \`$name\` | $cat | $lines | $refs |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  markdown:
+    name: Markdown lint & links
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint markdown
+        uses: DavidAnson/markdownlint-cli2-action@v20
+        continue-on-error: true
+        with:
+          globs: |
+            **/*.md
+            !node_modules
+
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        continue-on-error: true
+        with:
+          args: --no-progress --exclude-mail --max-concurrency 4 './**/*.md'
+          fail: false

@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+node_modules/
+build/
+dist/
+*.log
+
+# Never commit credentials or signing material
+*.jks
+*.keystore
+keystore.properties
+local.properties
+*.p12
+*service-account*.json
+.env
+.env.*
